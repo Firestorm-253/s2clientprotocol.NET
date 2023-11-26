@@ -1,8 +1,8 @@
-﻿using Google.Protobuf;
-using SC2APIProtocol;
-using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net.WebSockets;
+
+using Google.Protobuf;
+using SC2APIProtocol;
 
 namespace s2clientprotocol.NET;
 
@@ -150,13 +150,13 @@ public class Sc2Client
 
     public async Task<Response> MoveCamera(float x, float y)
     {
-        await this.ExecuteAction(new SC2APIProtocol.Action()
+        await this.ExecuteAction(new SC2APIProtocol.Action
         {
-            ActionRaw = new ActionRaw()
+            ActionRaw = new ActionRaw
             {
-                CameraMove = new ActionRawCameraMove()
+                CameraMove = new ActionRawCameraMove
                 {
-                    CenterWorldSpace = new Point()
+                    CenterWorldSpace = new Point
                     {
                         X = x,
                         Y = y
@@ -177,7 +177,7 @@ public class Sc2Client
                 {
                     UnitTags = { unitTag },
                     AbilityId = abilityId,
-                    TargetWorldSpacePos = new Point2D()
+                    TargetWorldSpacePos = new Point2D
                     {
                         X = 17 - 2 + (int.Parse(positionName[1].ToString()) * 2),
                         Y = 99 + 2 - (((byte)positionName[0] - 64) * 2)
