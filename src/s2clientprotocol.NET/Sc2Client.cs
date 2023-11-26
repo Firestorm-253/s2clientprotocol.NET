@@ -33,7 +33,7 @@ public class Sc2Client
 
     public async Task LoadData()
     {
-        await this.SendAsync(new Request
+        var resp = await this.SendAsync(new Request
         {
             Data = new RequestData
             {
@@ -43,20 +43,17 @@ public class Sc2Client
             },
         });
 
-        var data = (await this.ReceiveAsync()).Data;
+        var data = resp.Data;
 
         this.Units = data.Units.ToArray();
         this.Upgrades = data.Upgrades.ToArray();
         this.Abilities = data.Abilities.ToArray();
     }
 
-    public async Task SendAsync(Request req)
+    public async Task<Response> SendAsync(Request req)
     {
         await this.clientWebSocket.SendAsync(req.ToByteArray(), WebSocketMessageType.Binary, true, CancellationToken.None);
-    }
 
-    public async Task<Response> ReceiveAsync()
-    {
         await using var ms = new MemoryStream();
         while (true)
         {
@@ -72,18 +69,24 @@ public class Sc2Client
             }
         }
         ms.Seek(0, SeekOrigin.Begin);
-        return Response.Parser.ParseFrom(ms);
+
+        var response = Response.Parser.ParseFrom(ms);
+        if (response.Error.Any())
+        {
+            throw new Exception(response.Error.ToString());
+        }
+        return response;
     }
 
     public async Task Ping()
     {
-        await this.SendAsync(new Request { Ping = new RequestPing() });
-        Console.WriteLine(await this.ReceiveAsync());
+        var response = await this.SendAsync(new Request { Ping = new RequestPing() });
+        Console.WriteLine(response);
     }
 
-    public async Task CreateGame(bool realtime = true, string mapFile = "Ladder2019Season3\\AcropolisLE.SC2Map", params PlayerSetup[] players)
+    public async Task<Response> CreateGame(bool realtime = true, string mapFile = "Ladder2019Season3\\AcropolisLE.SC2Map", params PlayerSetup[] players)
     {
-        await this.SendAsync(new Request
+        var response = await this.SendAsync(new Request
         {
             CreateGame = new RequestCreateGame
             {
@@ -98,12 +101,13 @@ public class Sc2Client
                 },
             }
         });
-        Console.WriteLine(await this.ReceiveAsync());
+
+        return response;
     }
 
-    public async Task JoinGame(Race race)
+    public async Task<Response> JoinGame(Race race)
     {
-        await this.SendAsync(new Request
+        var response = await this.SendAsync(new Request
         {
             JoinGame = new RequestJoinGame
             {
@@ -115,42 +119,46 @@ public class Sc2Client
                 }
             }
         });
-        Console.WriteLine(await this.ReceiveAsync());
+
+        return response;
     }
 
     public async Task<ResponseObservation> Observe()
     {
-        await this.SendAsync(new Request { Observation = new RequestObservation() });
-        return (await this.ReceiveAsync()).Observation; 
+        var response = await this.SendAsync(new Request { Observation = new RequestObservation() });
+        return response.Observation; 
     }
 
-    public async Task<(string name, Unit unit)[]> GetUnits()
+    public async Task<(string name, Unit unit)[]> GetUnits(int owner = -1)
     {
         var observation = await this.Observe();
         var units = observation.Observation.RawData.Units;
 
-        return units.Select(x => (this.Units[x.UnitType].Name, x)).ToArray();
+        return units
+            .Where(x => owner == -1 ? true : x.Owner == owner)
+            .Select(x => (this.Units[x.UnitType].Name, x))
+            .ToArray();
     }
 
     public async Task<Dictionary<string, AvailableAbility>> GetAbilitiesByName(ulong unitTag)
     {
         var req = new Request { Query = new RequestQuery() };
         req.Query.Abilities.Add(new RequestQueryAvailableAbilities { UnitTag = unitTag });
-        await this.SendAsync(req);
+        var response = await this.SendAsync(req);
 
-        var abilities = (await this.ReceiveAsync()).Query.Abilities[0].Abilities.ToArray();
-        return abilities.ToDictionary(x => this.Abilities[x.AbilityId].ButtonName.TrimStart('f'), x => x);
+        var abilities = response.Query.Abilities[0].Abilities.ToArray();
+        return abilities.ToDictionary(x => (this.Abilities[x.AbilityId].ButtonName ?? this.Abilities[x.AbilityId].FriendlyName).TrimStart('f'), x => x);
     }
 
     public async Task<Response> ExecuteAction(SC2APIProtocol.Action action)
     {
-        await this.SendAsync(new Request { Action = new RequestAction { Actions = { action } } });
-        return await this.ReceiveAsync();
+        var response = await this.SendAsync(new Request { Action = new RequestAction { Actions = { action } } });
+        return response;
     }
 
     public async Task<Response> MoveCamera(float x, float y)
     {
-        await this.ExecuteAction(new SC2APIProtocol.Action
+        return await this.ExecuteAction(new SC2APIProtocol.Action
         {
             ActionRaw = new ActionRaw
             {
@@ -164,26 +172,31 @@ public class Sc2Client
                 }
             }
         });
-        return await this.ReceiveAsync();
     }
 
-    public async Task<Response> ExecuteAbilityCommand(ulong unitTag, int abilityId, string positionName)
+    public async Task<Response> ExecuteAbilityCommand(ulong unitTag, int abilityId, (float x, float y)? position = null)
     {
-        return await this.ExecuteAction(new SC2APIProtocol.Action
+        var action = new SC2APIProtocol.Action
         {
             ActionRaw = new ActionRaw
             {
                 UnitCommand = new ActionRawUnitCommand
                 {
                     UnitTags = { unitTag },
-                    AbilityId = abilityId,
-                    TargetWorldSpacePos = new Point2D
-                    {
-                        X = 17 - 2 + (int.Parse(positionName[1].ToString()) * 2),
-                        Y = 99 + 2 - (((byte)positionName[0] - 64) * 2)
-                    }
+                    AbilityId = abilityId
                 },
             }
-        });
+        };
+
+        if (position != null)
+        {
+            action.ActionRaw.UnitCommand.TargetWorldSpacePos = new Point2D()
+            {
+                X = position.Value.x,
+                Y = position.Value.y
+            };
+        }
+
+        return await this.ExecuteAction(action);
     }
 }
