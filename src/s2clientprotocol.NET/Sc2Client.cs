@@ -15,7 +15,7 @@ public class Sc2Client
     public UpgradeData[] Upgrades { get; private set; } = null!;
     public AbilityData[] Abilities { get; private set; } = null!;
 
-    public Sc2Client(bool startup = true, string ipAdress = "127.0.0.1", int port = 8168)
+    public Sc2Client(bool startup = true, string ipAdress = "127.0.0.1", int port = 8268)
     {
         if (startup)
         {
@@ -52,30 +52,49 @@ public class Sc2Client
 
     public async Task<Response> SendAsync(Request req)
     {
-        await this.clientWebSocket.SendAsync(req.ToByteArray(), WebSocketMessageType.Binary, true, CancellationToken.None);
-
-        await using var ms = new MemoryStream();
+        int failCounter = 0;
         while (true)
         {
-            var buffer = new ArraySegment<byte>(new byte[1024 * 1024]);
-            var result = await this.clientWebSocket.ReceiveAsync(buffer, CancellationToken.None);
-            if (buffer.Array != null)
-            {
-                ms.Write(buffer.Array, 0, result.Count);
-            }
-            if (result.EndOfMessage)
-            {
-                break;
-            }
-        }
-        ms.Seek(0, SeekOrigin.Begin);
+            await using var sendStream = new MemoryStream();
+            req.WriteTo(sendStream);
+            await this.clientWebSocket.SendAsync(sendStream.ToArray(), WebSocketMessageType.Binary, WebSocketMessageFlags.EndOfMessage, CancellationToken.None);
+            await sendStream.FlushAsync();
+            sendStream.Close();
 
-        var response = Response.Parser.ParseFrom(ms);
-        if (response.Error.Any())
-        {
-            throw new Exception(response.Error.ToString());
+            await using var receiveStream = new MemoryStream();
+            while (true)
+            {
+                var buffer = new ArraySegment<byte>(new byte[1024 * 1024]);
+                var result = await this.clientWebSocket.ReceiveAsync(buffer, CancellationToken.None);
+
+                if (buffer.Array != null)
+                {
+                    receiveStream.Write(buffer.Array, 0, result.Count);
+                }
+                if (result.EndOfMessage)
+                {
+                    break;
+                }
+            }
+            receiveStream.Seek(0, SeekOrigin.Begin);
+
+            var response = Response.Parser.ParseFrom(receiveStream);
+            await receiveStream.FlushAsync();
+            receiveStream.Close();
+
+            if (response.Error.Any())
+            {
+                failCounter++;
+
+                if (failCounter > 1)
+                {
+                }
+            }
+            else
+            {
+                return response;
+            }
         }
-        return response;
     }
 
     public async Task Ping()
@@ -129,14 +148,24 @@ public class Sc2Client
         return response.Observation; 
     }
 
-    public async Task<(string name, Unit unit)[]> GetUnits(int owner = -1)
+    public async Task<(string name, Unit unit)[]> GetUnits(int owner = -1, ResponseObservation? observation = null)
     {
-        var observation = await this.Observe();
+        observation ??= await this.Observe();
         var units = observation.Observation.RawData.Units;
 
         return units
             .Where(x => owner == -1 ? true : x.Owner == owner)
             .Select(x => (this.Units[x.UnitType].Name, x))
+            .ToArray();
+    }
+
+    public async Task<UpgradeData[]> GetUpgrades(ResponseObservation? observation = null)
+    {
+        observation ??= await this.Observe();
+        var upgrades = observation.Observation.RawData.Player.UpgradeIds;
+
+        return upgrades
+            .Select(x => this.Upgrades[x])
             .ToArray();
     }
 
