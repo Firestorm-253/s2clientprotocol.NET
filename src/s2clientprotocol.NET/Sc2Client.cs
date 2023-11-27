@@ -50,22 +50,27 @@ public class Sc2Client
         this.Abilities = data.Abilities.ToArray();
     }
 
+    static List<object> log = new List<object>();
+
     public async Task<Response> SendAsync(Request req)
     {
+        log.Add(req);
+
         int failCounter = 0;
+        await using var sendStream = new MemoryStream();
+        req.WriteTo(sendStream);
+        await this.clientWebSocket.SendAsync(sendStream.ToArray(), WebSocketMessageType.Binary, WebSocketMessageFlags.EndOfMessage, CancellationToken.None);
+        await sendStream.FlushAsync();
+        sendStream.Close();
+
         while (true)
         {
-            await using var sendStream = new MemoryStream();
-            req.WriteTo(sendStream);
-            await this.clientWebSocket.SendAsync(sendStream.ToArray(), WebSocketMessageType.Binary, WebSocketMessageFlags.EndOfMessage, CancellationToken.None);
-            await sendStream.FlushAsync();
-            sendStream.Close();
-
             await using var receiveStream = new MemoryStream();
             while (true)
             {
                 var buffer = new ArraySegment<byte>(new byte[1024 * 1024]);
                 var result = await this.clientWebSocket.ReceiveAsync(buffer, CancellationToken.None);
+                log.Add(result);
 
                 if (buffer.Array != null)
                 {
@@ -82,17 +87,16 @@ public class Sc2Client
             await receiveStream.FlushAsync();
             receiveStream.Close();
 
-            if (response.Error.Any())
-            {
-                failCounter++;
+            log.Add(response);
 
-                if (failCounter > 1)
-                {
-                }
-            }
-            else
+            if (!response.Error.Any())
             {
                 return response;
+            }
+
+            failCounter++;
+            if (failCounter > 1)
+            {
             }
         }
     }
