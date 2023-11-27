@@ -1,4 +1,5 @@
-﻿using SC2APIProtocol;
+﻿using s2clientprotocol.NET.Sc2;
+using SC2APIProtocol;
 
 namespace s2clientprotocol.NET.SquadronTD;
 
@@ -13,7 +14,7 @@ public class SquadClient
         this.ownerId = ownerId;
 
         sc2Client = new Sc2Client(startup: startup);
-        sc2Client.Ping().Wait();
+        sc2Client.Ping();
 
         sc2Client.CreateGame(
             realtime: true,
@@ -24,41 +25,38 @@ public class SquadClient
                 Race = Race.NoRace,
                 Type = PlayerType.Participant
             }
-        ).Wait();
-        Console.WriteLine("game created");
+        );
 
-        sc2Client.JoinGame(Race.NoRace).Wait();
-        Console.WriteLine("game joined");
+        sc2Client.JoinGame(Race.NoRace);
 
-        sc2Client.LoadData().Wait();
-        Console.WriteLine("data loaded");
+        sc2Client.LoadData();
     }
 
-    public async Task<Response> ExecuteUnitAbility(string unitName, string abilityName, string? positionName = null)
+    public Response ExecuteUnitAbility(string unitName, string abilityName, string? positionName = null)
     {
-        var units = await sc2Client.GetUnits(ownerId);
+        var units = sc2Client.GetUnits(ownerId);
         var unit = units.Single(x => x.name == unitName).unit;
 
-        var abilities = await sc2Client.GetAbilitiesByName(unit.Tag);
+        var abilities = sc2Client.GetAbilitiesByName(unit.Tag);
         var abilityId = abilities[abilityName].AbilityId;
 
         if (positionName == null)
         {
-            return await sc2Client.ExecuteAbilityCommand(unit.Tag, abilityId);
+            return sc2Client.ExecuteAbilityCommand(unit.Tag, abilityId);
         }
 
         var x = 17 - 2 + int.Parse(positionName[1].ToString()) * 2;
         var y = 99 + 2 - ((byte)positionName[0] - 64) * 2;
 
-        return await sc2Client.ExecuteAbilityCommand(unit.Tag, abilityId, (x, y));
+        return sc2Client.ExecuteAbilityCommand(unit.Tag, abilityId, (x, y));
     }
 
-    public async Task<SquadInfos> GetInfos()
+    public SquadInfos GetInfos()
     {
-        var observation = await this.sc2Client.Observe();
+        var observation = this.sc2Client.Observe();
         var playerObs = observation.Observation.PlayerCommon;
 
-        var upgrades = await this.sc2Client.GetUpgrades(observation);
+        var upgrades = this.sc2Client.GetUpgrades(observation);
 
         return new SquadInfos
         {
