@@ -47,9 +47,9 @@ public class Sc2Client
 
         var data = response.Data;
 
-        Units = data.Units.ToArray();
-        Upgrades = data.Upgrades.ToArray();
-        Abilities = data.Abilities.ToArray();
+        this.Units = data.Units.ToArray();
+        this.Upgrades = data.Upgrades.ToArray();
+        this.Abilities = data.Abilities.ToArray();
     }
 
     public Response CreateGame(bool realtime = true, string mapFile = "Ladder2019Season3\\AcropolisLE.SC2Map", params PlayerSetup[] players)
@@ -107,6 +107,7 @@ public class Sc2Client
 
         if (response != null)
         {
+            Log("observation");
             return response.Observation;
         }
         throw new Exception("error: observation");
@@ -114,22 +115,22 @@ public class Sc2Client
 
     public (string name, Unit unit)[] GetUnits(int owner = -1, ResponseObservation? observation = null)
     {
-        observation ??= Observe();
+        observation ??= this.Observe();
         var units = observation.Observation.RawData.Units;
 
         return units
             .Where(x => owner == -1 ? true : x.Owner == owner)
-            .Select(x => (Units[x.UnitType].Name, x))
+            .Select(x => (this.Units[x.UnitType].Name, x))
             .ToArray();
     }
 
     public UpgradeData[] GetUpgrades(ResponseObservation? observation = null)
     {
-        observation ??= Observe();
+        observation ??= this.Observe();
         var upgrades = observation.Observation.RawData.Player.UpgradeIds;
 
         return upgrades
-            .Select(x => Upgrades[x])
+            .Select(x => this.Upgrades[x])
             .ToArray();
     }
 
@@ -146,7 +147,7 @@ public class Sc2Client
         Log("request abilities");
 
         var abilities = response.Query.Abilities[0].Abilities.ToArray();
-        return abilities.ToDictionary(x => (Abilities[x.AbilityId].ButtonName ?? Abilities[x.AbilityId].FriendlyName).TrimStart('f'), x => x);
+        return abilities.ToDictionary(x => (this.Abilities[x.AbilityId].ButtonName ?? this.Abilities[x.AbilityId].FriendlyName).TrimStart('f'), x => x);
     }
 
     public Response ExecuteAction(SC2APIProtocol.Action action)
@@ -163,7 +164,7 @@ public class Sc2Client
 
     public Response MoveCamera(float x, float y)
     {
-        return ExecuteAction(new SC2APIProtocol.Action
+        return this.ExecuteAction(new SC2APIProtocol.Action
         {
             ActionRaw = new ActionRaw
             {
@@ -202,6 +203,6 @@ public class Sc2Client
             };
         }
 
-        return ExecuteAction(action);
+        return this.ExecuteAction(action);
     }
 }
