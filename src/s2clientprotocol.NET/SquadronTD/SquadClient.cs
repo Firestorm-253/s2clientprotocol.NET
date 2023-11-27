@@ -9,7 +9,7 @@ public class SquadClient
 
     private readonly Sc2Client sc2Client = null!;
 
-    public SquadClient(bool startup = true, int ownerId = 1)
+    public SquadClient(bool startup = true, bool realtime = true, int ownerId = 1)
     {
         this.ownerId = ownerId;
 
@@ -17,7 +17,7 @@ public class SquadClient
         sc2Client.Ping();
 
         sc2Client.CreateGame(
-            realtime: true,
+            realtime: realtime,
             mapFile: "SquadronTD.SC2Map",
 
             new PlayerSetup
