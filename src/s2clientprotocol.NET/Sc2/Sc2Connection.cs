@@ -27,22 +27,22 @@ public class Sc2Connection
             sc2_process!.WaitForInputIdle();
         }
 
-        if (!Connect(new Uri($"ws://{ipAdress}:{port}/sc2api")))
+        if (!this.Connect(new Uri($"ws://{ipAdress}:{port}/sc2api")))
         {
             throw new Exception("connection failed");
         }
 
-        _handler = new CaseHandler<Response.ResponseOneofCase, Response>();
+        this._handler = new CaseHandler<Response.ResponseOneofCase, Response>();
     }
 
     public void RegisterHandler(Response.ResponseOneofCase action, Action<Response> handler)
     {
-        _handler.RegisterHandler(action, handler);
+        this._handler.RegisterHandler(action, handler);
     }
 
     public void DeregisterHandler(Action<Response> handler)
     {
-        _handler.DeregisterHandler(handler);
+        this._handler.DeregisterHandler(handler);
     }
 
     private bool Connect(Uri uri, int maxAttempts = 25)
@@ -52,8 +52,8 @@ public class Sc2Connection
         {
             try
             {
-                _socket = new ClientWebSocket();
-                _socket.ConnectAsync(uri, CancellationToken.None).Wait();
+                this._socket = new ClientWebSocket();
+                this._socket.ConnectAsync(uri, CancellationToken.None).Wait();
             }
             catch (AggregateException)
             {
@@ -65,10 +65,10 @@ public class Sc2Connection
                 break;
             }
         }
-        while (_socket.State != WebSocketState.Open && num < maxAttempts);
-        if (_socket.State == WebSocketState.Open)
+        while (this._socket.State != WebSocketState.Open && num < maxAttempts);
+        if (this._socket.State == WebSocketState.Open)
         {
-            Task.Run(() => Receive());
+            Task.Run(() => this.Receive());
             return true;
         }
 
@@ -77,7 +77,7 @@ public class Sc2Connection
 
     public void AsyncSend(Request req)
     {
-        _socket.SendAsync(new ArraySegment<byte>(req.ToByteArray()), WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None);
+        this._socket.SendAsync(new ArraySegment<byte>(req.ToByteArray()), WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None);
     }
 
     public bool TryWaitResponse(Request req, out Response response, int wait = 1000)
@@ -90,12 +90,12 @@ public class Sc2Connection
             marker.RunSynchronously();
         }
 
-        _handler.RegisterHandler((Response.ResponseOneofCase)req.RequestCase, handler);
+        this._handler.RegisterHandler((Response.ResponseOneofCase)req.RequestCase, handler);
 
-        AsyncSend(req);
+        this.AsyncSend(req);
         marker.Wait(wait);
 
-        _handler.DeregisterHandler(handler);
+        this._handler.DeregisterHandler(handler);
         response = result!;
 
         return response != null;
@@ -104,19 +104,19 @@ public class Sc2Connection
     public async Task Receive()
     {
         ArraySegment<byte> buffer = new ArraySegment<byte>(new byte[1024]);
-        while (_socket.State == WebSocketState.Open)
+        while (this._socket.State == WebSocketState.Open)
         {
             using var ms = new MemoryStream();
             WebSocketReceiveResult webSocketReceiveResult;
             do
             {
-                webSocketReceiveResult = await _socket.ReceiveAsync(buffer, CancellationToken.None);
+                webSocketReceiveResult = await this._socket.ReceiveAsync(buffer, CancellationToken.None);
                 ms.Write(buffer.Array!, buffer.Offset, webSocketReceiveResult.Count);
             }
             while (!webSocketReceiveResult.EndOfMessage);
             Response response = Response.Parser.ParseFrom(ms.GetBuffer(), 0, (int)ms.Position);
-            Status = response.Status;
-            _handler.Handle(response.ResponseCase, response);
+            this.Status = response.Status;
+            this._handler.Handle(response.ResponseCase, response);
         }
     }
 }

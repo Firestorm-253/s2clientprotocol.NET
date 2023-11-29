@@ -6,14 +6,14 @@ public class CaseHandler<T1, T2>
 
     public CaseHandler()
     {
-        _events = new Dictionary<T1, ICollection<Action<T2>>>();
+        this._events = new Dictionary<T1, ICollection<Action<T2>>>();
     }
 
     public void Handle(T1 action, T2 type)
     {
-        lock (_events)
+        lock (this._events)
         {
-            if (!_events.TryGetValue(action, out var value))
+            if (!this._events.TryGetValue(action, out var value))
             {
                 return;
             }
@@ -27,23 +27,23 @@ public class CaseHandler<T1, T2>
 
     public void RegisterHandler(T1 action, Action<T2> handler)
     {
-        lock (_events)
+        lock (this._events)
         {
-            if (_events.ContainsKey(action))
+            if (this._events.ContainsKey(action))
             {
-                _events[action].Add(handler);
+                this._events[action].Add(handler);
                 return;
             }
 
-            _events.Add(action, new List<Action<T2>> { handler });
+            this._events.Add(action, new List<Action<T2>> { handler });
         }
     }
 
     public void DeregisterHandler(Action<T2> handler)
     {
-        lock (_events)
+        lock (this._events)
         {
-            using IEnumerator<KeyValuePair<T1, ICollection<Action<T2>>>> enumerator = _events.GetEnumerator();
+            using IEnumerator<KeyValuePair<T1, ICollection<Action<T2>>>> enumerator = this._events.GetEnumerator();
             while (enumerator.MoveNext() && !enumerator.Current.Value.Remove(handler))
             {
             }

@@ -12,12 +12,12 @@ public class Sc2Client
 
     public Sc2Client(bool startup = true, string ipAdress = "127.0.0.1", int port = 8268)
     {
-        connection = new Sc2Connection(startup, ipAdress, port);
+        this.connection = new Sc2Connection(startup, ipAdress, port);
     }
 
     public void Ping()
     {
-        connection.TryWaitResponse(new Request { Ping = new RequestPing() }, out var response);
+        this.connection.TryWaitResponse(new Request { Ping = new RequestPing() }, out var response);
 
         if (response != null)
         {
@@ -29,7 +29,7 @@ public class Sc2Client
 
     public void LoadData()
     {
-        connection.TryWaitResponse(new Request
+        this.connection.TryWaitResponse(new Request
         {
             Data = new RequestData
             {
@@ -54,7 +54,7 @@ public class Sc2Client
 
     public Response CreateGame(bool realtime = true, string mapFile = "Ladder2019Season3\\AcropolisLE.SC2Map", params PlayerSetup[] players)
     {
-        connection.TryWaitResponse(new Request
+        this.connection.TryWaitResponse(new Request
         {
             CreateGame = new RequestCreateGame
             {
@@ -80,7 +80,7 @@ public class Sc2Client
 
     public Response JoinGame(Race race)
     {
-        connection.TryWaitResponse(new Request
+        this.connection.TryWaitResponse(new Request
         {
             JoinGame = new RequestJoinGame
             {
@@ -103,7 +103,7 @@ public class Sc2Client
 
     public ResponseObservation Observe()
     {
-        connection.TryWaitResponse(new Request { Observation = new RequestObservation() }, out var response);
+        this.connection.TryWaitResponse(new Request { Observation = new RequestObservation() }, out var response);
 
         if (response != null)
         {
@@ -138,7 +138,7 @@ public class Sc2Client
     {
         var req = new Request { Query = new RequestQuery() };
         req.Query.Abilities.Add(new RequestQueryAvailableAbilities { UnitTag = unitTag });
-        connection.TryWaitResponse(req, out var response);
+        this.connection.TryWaitResponse(req, out var response);
 
         if (response == null)
         {
@@ -152,7 +152,7 @@ public class Sc2Client
 
     public Response ExecuteAction(SC2APIProtocol.Action action)
     {
-        connection.TryWaitResponse(new Request { Action = new RequestAction { Actions = { action } } }, out var response);
+        this.connection.TryWaitResponse(new Request { Action = new RequestAction { Actions = { action } } }, out var response);
 
         if (response != null)
         {

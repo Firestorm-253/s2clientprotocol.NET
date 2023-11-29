@@ -13,10 +13,10 @@ public class SquadClient
     {
         this.ownerId = ownerId;
 
-        sc2Client = new Sc2Client(startup: startup);
-        sc2Client.Ping();
+        this.sc2Client = new Sc2Client(startup: startup);
+        this.sc2Client.Ping();
 
-        sc2Client.CreateGame(
+        this.sc2Client.CreateGame(
             realtime: realtime,
             mapFile: "SquadronTD.SC2Map",
 
@@ -27,28 +27,28 @@ public class SquadClient
             }
         );
 
-        sc2Client.JoinGame(Race.NoRace);
+        this.sc2Client.JoinGame(Race.NoRace);
+        this.sc2Client.LoadData();
 
-        sc2Client.LoadData();
     }
 
     public Response ExecuteUnitAbility(string unitName, string abilityName, string? positionName = null)
     {
-        var units = sc2Client.GetUnits(ownerId);
+        var units = this.sc2Client.GetUnits(this.ownerId);
         var unit = units.Single(x => x.name == unitName).unit;
 
-        var abilities = sc2Client.GetAbilitiesByName(unit.Tag);
+        var abilities = this.sc2Client.GetAbilitiesByName(unit.Tag);
         var abilityId = abilities[abilityName].AbilityId;
 
         if (positionName == null)
         {
-            return sc2Client.ExecuteAbilityCommand(unit.Tag, abilityId);
+            return this.sc2Client.ExecuteAbilityCommand(unit.Tag, abilityId);
         }
 
         var x = 17 - 2 + int.Parse(positionName[1].ToString()) * 2;
         var y = 99 + 2 - ((byte)positionName[0] - 64) * 2;
 
-        return sc2Client.ExecuteAbilityCommand(unit.Tag, abilityId, (x, y));
+        return this.sc2Client.ExecuteAbilityCommand(unit.Tag, abilityId, (x, y));
     }
 
     public SquadInfos GetInfos()
