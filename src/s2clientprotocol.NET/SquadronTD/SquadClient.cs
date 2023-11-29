@@ -9,6 +9,8 @@ public class SquadClient
     private readonly bool realtime;
     private readonly Sc2Client sc2Client = null!;
 
+    // ToDo: keep track of income somehow
+
     public SquadClient(bool startup = true, bool realtime = true, int ownerId = 1)
     {
         this.ownerId = ownerId;
@@ -65,6 +67,7 @@ public class SquadClient
     public SquadInfos GetInfos()
     {
         var observation = this.sc2Client.Observe();
+        var units = this.sc2Client.GetUnits(this.ownerId, observation);
         var playerObs = observation.Observation.PlayerCommon;
 
         var upgrades = this.sc2Client.GetUpgrades(observation);
@@ -76,6 +79,7 @@ public class SquadClient
             Gas = playerObs.Vespene,
             CurrentSupply = playerObs.FoodUsed,
             MaxSupply = playerObs.FoodCap,
+            Units = units
         };
     }
 }
