@@ -27,6 +27,24 @@ public class Sc2Client
         throw new Exception("error: ping");
     }
 
+    public void Step(uint count)
+    {
+        this.connection.TryWaitResponse(new Request
+        {
+            Step = new RequestStep
+            {
+                Count = count
+            }
+        }, out var response);
+
+        if (response != null)
+        {
+            Log(response);
+            return;
+        }
+        throw new Exception("error: step");
+    }
+
     public void LoadData()
     {
         this.connection.TryWaitResponse(new Request

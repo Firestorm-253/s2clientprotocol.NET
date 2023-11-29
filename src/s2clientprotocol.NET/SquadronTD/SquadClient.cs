@@ -6,12 +6,13 @@ namespace s2clientprotocol.NET.SquadronTD;
 public class SquadClient
 {
     private readonly int ownerId;
-
+    private readonly bool realtime;
     private readonly Sc2Client sc2Client = null!;
 
     public SquadClient(bool startup = true, bool realtime = true, int ownerId = 1)
     {
         this.ownerId = ownerId;
+        this.realtime = realtime;
 
         this.sc2Client = new Sc2Client(startup: startup);
         this.sc2Client.Ping();
@@ -28,8 +29,18 @@ public class SquadClient
         );
 
         this.sc2Client.JoinGame(Race.NoRace);
-        this.sc2Client.LoadData();
 
+        this.sc2Client.LoadData();
+    }
+
+    public void Step(uint count)
+    {
+        if (this.realtime)
+        {
+            throw new Exception("error: step with realtime");
+        }
+
+        this.sc2Client.Step(count);
     }
 
     public Response ExecuteUnitAbility(string unitName, string abilityName, string? positionName = null)
