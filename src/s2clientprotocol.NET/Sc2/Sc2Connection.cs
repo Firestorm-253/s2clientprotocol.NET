@@ -20,8 +20,10 @@ public class Sc2Connection
     {
         if (startup)
         {
+            string version = Directory.GetDirectories($"{SC2_PATH}\\Versions").Max()!;
+
             var sc2_process = Process.Start(new ProcessStartInfo(
-            $"{SC2_PATH}\\Versions\\Base91115\\SC2.exe",
+            $"{version}\\SC2.exe",
             $"-listen {ipAdress} -port {port} -displaymode 0 -windowwidth 1024 -windowheight 768 -windowx 0 -windowy 0")
             { WorkingDirectory = $"{SC2_PATH}\\Support" });
             sc2_process!.WaitForInputIdle();
