@@ -67,10 +67,29 @@ public class SquadClient
     public SquadInfos GetInfos()
     {
         var observation = this.sc2Client.Observe();
-        var units = this.sc2Client.GetUnits(this.ownerId, observation);
         var playerObs = observation.Observation.PlayerCommon;
 
         var upgrades = this.sc2Client.GetUpgrades(observation);
+
+        var entities = this.sc2Client.GetUnits(this.ownerId, observation);
+        var units = entities.Where(x =>
+            !x.name.Contains("Builder") &&
+            x.name != "PetPlacer" &&
+            x.name != "BuildingPlacer" &&
+            x.name != "SecuritySystem" &&
+            x.name != "WarCenter" &&
+            x.name != "RewardsMenu" &&
+            x.name != "BasicSends" &&
+            x.name != "StandardSends" &&
+            x.name != "AdvancedSends"
+        ).ToArray();
+
+        var builder = entities.First(x => x.name.EndsWith("Builder")).unit;
+        var securitySystem = entities.First(x => x.name == "SecuritySystem").unit;
+        var warCenter = entities.First(x => x.name == "WarCenter").unit;
+        var sendBuildings = entities
+            .Where(x => x.name == "BasicSends" || x.name == "StandardSends" || x.name == "AdvancedSends")
+            .ToDictionary(ent => ent.name, ent => ent.unit);
 
         return new SquadInfos
         {
@@ -79,6 +98,10 @@ public class SquadClient
             Gas = playerObs.Vespene,
             CurrentSupply = playerObs.FoodUsed,
             MaxSupply = playerObs.FoodCap,
+            Builder = builder,
+            SecuritySysten = securitySystem,
+            WarCenter = warCenter,
+            SendBuildings = sendBuildings,
             Units = units
         };
     }

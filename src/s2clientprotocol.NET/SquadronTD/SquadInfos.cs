@@ -11,4 +11,8 @@ public record SquadInfos
     public uint MaxSupply { get; set; }
 
     public (string name, Unit unit)[] Units { get; set; } = null!;
+    public Unit Builder { get; set; } = null!;
+    public Unit SecuritySysten { get; set; } = null!;
+    public Unit WarCenter { get; set; } = null!;
+    public Dictionary<string, Unit> SendBuildings { get; set; } = null!;
 }
